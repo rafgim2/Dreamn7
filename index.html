@@ -692,13 +692,21 @@ function mapGrips(session){
 
   const pointers = [];
   for (const src of session.inputSources){
-    if (src.targetRayMode === "tracked-pointer") pointers.push(src);
+    if (src?.targetRayMode === "tracked-pointer") pointers.push(src);
   }
+
+  // Primero por handedness
   for (let i=0;i<pointers.length;i++){
     const src = pointers[i];
     const obj = (i === 0) ? grip0 : grip1;
     if (src.handedness === "right") controllerRightObj = obj;
     if (src.handedness === "left")  controllerLeftObj  = obj;
+  }
+
+  // Fallback: si handedness viene vacío, asigna por orden (0→right, 1→left)
+  if ((!controllerRightObj || !controllerLeftObj) && pointers.length >= 2){
+    if (!controllerRightObj) controllerRightObj = grip0;
+    if (!controllerLeftObj)  controllerLeftObj  = grip1;
   }
 
   log(controllerRightObj ? "🎮 Mando derecho mapeado" : "ℹ️ Sin mando derecho (modo móvil/hand-tracking)");
@@ -1409,17 +1417,34 @@ function updateHaptics(session){
   rightHaptic = null;
   leftHaptic = null;
 
+  // 1) Intento por handedness (lo ideal)
+  const candidates = [];
   for (const src of session.inputSources){
-    if (!src.gamepad) continue;
+    if (!src?.gamepad) continue;
     const acts = src.gamepad.hapticActuators;
     if (!acts || acts.length === 0) continue;
 
-    if (src.handedness === "right") rightHaptic = acts[0];
-    if (src.handedness === "left")  leftHaptic  = acts[0];
+    const act = acts[0];
+    candidates.push({ src, act });
+
+    if (src.handedness === "right") rightHaptic = act;
+    if (src.handedness === "left")  leftHaptic  = act;
   }
 
-  log(rightHaptic ? "✅ Háptica derecha OK" : "ℹ️ Sin háptica derecha (modo móvil)");
-  log(leftHaptic  ? "✅ Háptica izquierda OK" : "ℹ️ Sin háptica izquierda (modo móvil)");
+  // 2) Fallback: algunos runtimes devuelven handedness="none" o no lo rellenan bien.
+  //    Si tenemos 2 actuadores y falta alguno, asignamos por orden estable (0→derecha, 1→izquierda).
+  if ((!rightHaptic || !leftHaptic) && candidates.length >= 2){
+    if (!rightHaptic) rightHaptic = candidates[0].act;
+    if (!leftHaptic)  leftHaptic  = candidates[1].act;
+  }
+
+  // 3) Si solo hay 1 actuador, lo dejamos como derecha.
+  if ((!rightHaptic && !leftHaptic) && candidates.length === 1){
+    rightHaptic = candidates[0].act;
+  }
+
+  log(rightHaptic ? "✅ Háptica derecha OK" : "ℹ️ Sin háptica derecha (modo móvil / sin actuador)");
+  log(leftHaptic  ? "✅ Háptica izquierda OK" : "ℹ️ Sin háptica izquierda (modo móvil / sin actuador)");
 }
 
 function pulseController(actuator){
@@ -1469,7 +1494,9 @@ function tickHand(times, which, videoTime, midiTime){
       const diff = nt - midiTime;
       if (diff <= HAPTIC_WINDOW){
         if (videoTime - lastPulseLeftAt > MIN_PULSE_GAP){
-          const ok = pulseController(leftHaptic);
+          let ok = pulseController(leftHaptic);
+          // Último recurso: si el runtime no expone actuador izquierdo, probamos el derecho
+          if (!ok && rightHaptic) ok = pulseController(rightHaptic);
           if (!ok) mobileVibrate();
 
           lastPulseLeftAt = videoTime;
