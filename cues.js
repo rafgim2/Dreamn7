@@ -1,5 +1,5 @@
 // URL del vídeo (GitHub Pages, mismo directorio)
-export const VIDEO_URL = "https://pub-aa6ee859836d478ca4ac85eb9f71f0c3.r2.dev/brokennotear.mp4";
+export const VIDEO_URL = "https://pub-aa6ee859836d478ca4ac85eb9f71f0c3.r2.dev/Dreamn7(1).mp4";
 
 // Cues (incluye título con type:"title")
 export const CUES = [
@@ -17,6 +17,7 @@ export const CUES = [
   { t: 106.0, type: "text", text: ["Algo sigue vibrando en silencio,", "esperando para empezar…"] },
   { t: 125.0, type: "text", text: ["Porque incluso cuando nada ocurre,", "algo empieza a cambiar…"] },
 ];
+
 
 
 
