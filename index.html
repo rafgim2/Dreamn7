@@ -63,11 +63,12 @@ const logEl = document.getElementById("log");
 const log = (m) => { logEl.textContent += (logEl.textContent ? "\n" : "") + m; };
 
 // ==================== CONFIG MIDI/HÁPTICA ====================
-const MIDI_RIGHT_URL = "./dream14iz.mid";
-const MIDI_LEFT_URL  = "./dream147.mid";
+const MIDI_RIGHT_URL = "./dream147.mid";
+const MIDI_LEFT_URL  = "./dream14iz.mid";
 
 const MIDI_OFFSET_RIGHT = 3.4;
 const MIDI_OFFSET_LEFT  = 3.4;
+
 const HAPTIC_INTENSITY = 0.35;
 const HAPTIC_DURATION_MS = 18;
 
@@ -1384,11 +1385,11 @@ cometPos.copy(camPos)
 // ==================== VIBRACIÓN MÓVIL ====================
 let lastMobileVibeAt = -999;
 function mobileVibrate(){
-  // En móvil no hay intensidad: usamos duración fija + gap mínimo para que se note.
-  const now = performance.now();
-  if (now - lastMobileVibe < 60) return; // min gap (ms)
-  lastMobileVibe = now;
-  try{ navigator.vibrate(28); }catch(e){}
+  if (!("vibrate" in navigator)) return;
+  const now = performance.now() / 1000;
+  if (now - lastMobileVibeAt < MOBILE_MIN_GAP) return;
+  lastMobileVibeAt = now;
+  navigator.vibrate(MOBILE_VIBRATION_MS);
 }
 
 // ==================== HÁPTICA + MIDI ====================
@@ -1652,47 +1653,31 @@ screen.visible = true;
 frameGroup.visible = true;
 points.visible = true; // opcional: partículas
 
-try{
-  // Cargamos cada MIDI por separado para que uno no bloquee al otro
-  log("⏳ Cargando MIDI derecha...");
-  try{
-    rightTimes = await loadMidiTimes(MIDI_RIGHT_URL);
-    log("✅ MIDI derecha OK (" + rightTimes.length + " notas)");
-    if (rightTimes.length){
-      log("   R: primera=" + rightTimes[0].toFixed(3) + "s, última=" + rightTimes[rightTimes.length-1].toFixed(3) + "s");
-    } else {
-      log("⚠️ MIDI derecha cargó pero sin notas (¿archivo vacío o formato raro?)");
-    }
-  }catch(e){
-    rightTimes = [];
-    log("⚠️ No se pudo cargar MIDI derecha: " + (e?.message || e));
-  }
+    try{
+      log("⏳ Cargando MIDI derecha...");
+      rightTimes = await loadMidiTimes(MIDI_RIGHT_URL);
+      log("✅ MIDI derecha OK (" + rightTimes.length + " notas)");
 
-  log("⏳ Cargando MIDI izquierda...");
-  try{
-    leftTimes = await loadMidiTimes(MIDI_LEFT_URL);
-    log("✅ MIDI izquierda OK (" + leftTimes.length + " notas)");
-    if (leftTimes.length){
-      log("   L: primera=" + leftTimes[0].toFixed(3) + "s, última=" + leftTimes[leftTimes.length-1].toFixed(3) + "s");
-    } else {
-      log("⚠️ MIDI izquierda cargó pero sin notas (¿archivo vacío o formato raro?)");
-    }
-  }catch(e){
-    leftTimes = [];
-    log("⚠️ No se pudo cargar MIDI izquierda: " + (e?.message || e));
-  }
+      log("⏳ Cargando MIDI izquierda...");
+      leftTimes = await loadMidiTimes(MIDI_LEFT_URL);
+      log("✅ MIDI izquierda OK (" + leftTimes.length + " notas)");
 
-  // Resincroniza índices con el tiempo actual del vídeo
-  const mr = Math.max(0, video.currentTime - MIDI_OFFSET_RIGHT);
-  const ml = Math.max(0, video.currentTime - MIDI_OFFSET_LEFT);
-  if (rightTimes.length) rightIdx = resyncIndex(rightTimes, mr);
-  if (leftTimes.length)  leftIdx  = resyncIndex(leftTimes,  ml);
+      const mr = Math.max(0, video.currentTime - MIDI_OFFSET_RIGHT);
+      const ml = Math.max(0, video.currentTime - MIDI_OFFSET_LEFT);
+      rightIdx = resyncIndex(rightTimes, mr);
+      leftIdx  = resyncIndex(leftTimes,  ml);
 
-  log("🟣 Listo. Offsets: R=" + MIDI_OFFSET_RIGHT + "s, L=" + MIDI_OFFSET_LEFT + "s");
-  log("   (Si una mano no vibra, mira arriba si ese MIDI tiene 0 notas o si no se pudo cargar)");
+      log("🟣 Listo. Offsets: R=" + MIDI_OFFSET_RIGHT + "s, L=" + MIDI_OFFSET_LEFT + "s");
 
-  // a
-}catch(e){
+      // auto enter AR
+      try{
+        const ok = await navigator.xr.isSessionSupported("immersive-ar");
+        if(ok) await enter("immersive-ar");
+        else log("AR no soportado");
+      }catch(e){ log("AR error: "+e.message); }
+
+      log(("vibrate" in navigator) ? "📳 Vibración móvil disponible" : "ℹ️ Vibración móvil NO disponible (iOS suele bloquear)");
+    }catch(e){
       log("⚠️ MIDI/háptica no disponibles: " + (e?.message || e));
     }
 
