@@ -8,15 +8,16 @@ export const CUES = [
 
   // ✅ TEXTO NORMAL
 
- { t: 12.0, type: "text", text: ["Incompleto y roto,", "con aristas desiguales que parecen no cuadrar…"] },
-  { t: 25.0, type: "text", text: ["desapercibido, invisible,", "incomprendido en su complejidad…"] },
-  { t: 40.0, type: "text", text: ["Incompleto y roto,", "pero destinado a encajar en algún lugar…"] },
-  { t: 55.0, type: "text", text: ["A veces distante,", "anhelando la perfección de la inmensidad…"] },
-  { t: 70.0, type: "text", text: ["Incompleto y roto,", "como una sombra que no se puede ocultar…"] },
-  { t: 85.0, type: "text", text: ["Con cicatrices,", "pero también historias que nadie más puede contar…"] },
-  { t: 115.0, type: "text", text: ["Formando parte de un todo,", "aunque sus grietas griten su fragilidad…"] },
-  { t: 130.0, type: "text", text: ["Incompleto y roto, pero un enigma", "y un susurro para los que se atrevan a escuchar…"] },
+ { t: 11.0, type: "text", text: ["Dos caminos que se cruzan sin tocarse,", "para no volver a doler…"] },
+  { t: 24.0, type: "text", text: ["Un silencio que no pide palabras,", "sino tiempo para crecer…"] },
+  { t: 39.0, type: "text", text: ["A veces cuando algo no sucede,", "sigue buscando su lugar…"] },
+  { t: 53.0, type: "text", text: ["A veces la música no llega a sonar,", "pero aprende a esperar…"] },
+  { t: 71.0, type: "text", text: ["A veces los gestos no se dan,", "y deciden no volver…"] },
+  { t: 89.0, type: "text", text: ["Algo queda abierto y en espera,", "como dos acordes sin resolver…"] },
+  { t: 106.0, type: "text", text: ["Algo sigue vibrando en silencio,", "esperando para empezar…"] },
+  { t: 125.0, type: "text", text: ["Porque incluso cuando nada ocurre,", "algo empieza a cambiar…"] },
 ];
+
 
 
 
