@@ -8,15 +8,16 @@ export const CUES = [
 
   // ✅ TEXTO NORMAL
 
- { t: 12.0, type: "text", text: ["Dos caminos que se cruzan sin tocarse,", "para no volver a doler…"] },
-  { t: 25.0, type: "text", text: ["Un silencio que no pide palabras,", "sino tiempo para crecer…"] },
-  { t: 40.0, type: "text", text: ["A veces cuando algo no sucede,", "sigue buscando su lugar…"] },
-  { t: 54.0, type: "text", text: ["A veces la música no llega a sonar,", "pero aprende a esperar…"] },
-  { t: 72.0, type: "text", text: ["A veces los gestos no se dan,", "y deciden no volver…"] },
-  { t: 90.0, type: "text", text: ["Algo queda abierto y en espera,", "como dos acordes sin resolver…"] },
-  { t: 107.0, type: "text", text: ["Algo sigue vibrando en silencio,", "esperando para empezar…"] },
-  { t: 126.0, type: "text", text: ["Porque incluso cuando nada ocurre,", "algo empieza a cambiar…"] },
+ { t: 13.0, type: "text", text: ["Dos caminos que se cruzan sin tocarse,", "para no volver a doler…"] },
+  { t: 26.0, type: "text", text: ["Un silencio que no pide palabras,", "sino tiempo para crecer…"] },
+  { t: 41.0, type: "text", text: ["A veces cuando algo no sucede,", "sigue buscando su lugar…"] },
+  { t: 55.0, type: "text", text: ["A veces la música no llega a sonar,", "pero aprende a esperar…"] },
+  { t: 73.0, type: "text", text: ["A veces los gestos no se dan,", "y deciden no volver…"] },
+  { t: 91.0, type: "text", text: ["Algo queda abierto y en espera,", "como dos acordes sin resolver…"] },
+  { t: 108.0, type: "text", text: ["Algo sigue vibrando en silencio,", "esperando para empezar…"] },
+  { t: 127.0, type: "text", text: ["Porque incluso cuando nada ocurre,", "algo empieza a cambiar…"] },
 ];
+
 
 
 
