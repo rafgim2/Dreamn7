@@ -63,12 +63,11 @@ const logEl = document.getElementById("log");
 const log = (m) => { logEl.textContent += (logEl.textContent ? "\n" : "") + m; };
 
 // ==================== CONFIG MIDI/HÁPTICA ====================
-const MIDI_RIGHT_URL = "./dream14iz.mid";
-const MIDI_LEFT_URL  = "./dream147.mid";
+const MIDI_RIGHT_URL = "./dream147.mid";
+const MIDI_LEFT_URL  = "./dream14iz.mid";
 
 const MIDI_OFFSET_RIGHT = 3.4;
 const MIDI_OFFSET_LEFT  = 3.4;
-
 const HAPTIC_INTENSITY = 0.35;
 const HAPTIC_DURATION_MS = 18;
 
@@ -692,21 +691,13 @@ function mapGrips(session){
 
   const pointers = [];
   for (const src of session.inputSources){
-    if (src?.targetRayMode === "tracked-pointer") pointers.push(src);
+    if (src.targetRayMode === "tracked-pointer") pointers.push(src);
   }
-
-  // Primero por handedness
   for (let i=0;i<pointers.length;i++){
     const src = pointers[i];
     const obj = (i === 0) ? grip0 : grip1;
     if (src.handedness === "right") controllerRightObj = obj;
     if (src.handedness === "left")  controllerLeftObj  = obj;
-  }
-
-  // Fallback: si handedness viene vacío, asigna por orden (0→right, 1→left)
-  if ((!controllerRightObj || !controllerLeftObj) && pointers.length >= 2){
-    if (!controllerRightObj) controllerRightObj = grip0;
-    if (!controllerLeftObj)  controllerLeftObj  = grip1;
   }
 
   log(controllerRightObj ? "🎮 Mando derecho mapeado" : "ℹ️ Sin mando derecho (modo móvil/hand-tracking)");
@@ -1393,11 +1384,11 @@ cometPos.copy(camPos)
 // ==================== VIBRACIÓN MÓVIL ====================
 let lastMobileVibeAt = -999;
 function mobileVibrate(){
-  if (!("vibrate" in navigator)) return;
-  const now = performance.now() / 1000;
-  if (now - lastMobileVibeAt < MOBILE_MIN_GAP) return;
-  lastMobileVibeAt = now;
-  navigator.vibrate(MOBILE_VIBRATION_MS);
+  // En móvil no hay intensidad: usamos duración fija + gap mínimo para que se note.
+  const now = performance.now();
+  if (now - lastMobileVibe < 60) return; // min gap (ms)
+  lastMobileVibe = now;
+  try{ navigator.vibrate(28); }catch(e){}
 }
 
 // ==================== HÁPTICA + MIDI ====================
@@ -1417,34 +1408,17 @@ function updateHaptics(session){
   rightHaptic = null;
   leftHaptic = null;
 
-  // 1) Intento por handedness (lo ideal)
-  const candidates = [];
   for (const src of session.inputSources){
-    if (!src?.gamepad) continue;
+    if (!src.gamepad) continue;
     const acts = src.gamepad.hapticActuators;
     if (!acts || acts.length === 0) continue;
 
-    const act = acts[0];
-    candidates.push({ src, act });
-
-    if (src.handedness === "right") rightHaptic = act;
-    if (src.handedness === "left")  leftHaptic  = act;
+    if (src.handedness === "right") rightHaptic = acts[0];
+    if (src.handedness === "left")  leftHaptic  = acts[0];
   }
 
-  // 2) Fallback: algunos runtimes devuelven handedness="none" o no lo rellenan bien.
-  //    Si tenemos 2 actuadores y falta alguno, asignamos por orden estable (0→derecha, 1→izquierda).
-  if ((!rightHaptic || !leftHaptic) && candidates.length >= 2){
-    if (!rightHaptic) rightHaptic = candidates[0].act;
-    if (!leftHaptic)  leftHaptic  = candidates[1].act;
-  }
-
-  // 3) Si solo hay 1 actuador, lo dejamos como derecha.
-  if ((!rightHaptic && !leftHaptic) && candidates.length === 1){
-    rightHaptic = candidates[0].act;
-  }
-
-  log(rightHaptic ? "✅ Háptica derecha OK" : "ℹ️ Sin háptica derecha (modo móvil / sin actuador)");
-  log(leftHaptic  ? "✅ Háptica izquierda OK" : "ℹ️ Sin háptica izquierda (modo móvil / sin actuador)");
+  log(rightHaptic ? "✅ Háptica derecha OK" : "ℹ️ Sin háptica derecha (modo móvil)");
+  log(leftHaptic  ? "✅ Háptica izquierda OK" : "ℹ️ Sin háptica izquierda (modo móvil)");
 }
 
 function pulseController(actuator){
@@ -1494,9 +1468,7 @@ function tickHand(times, which, videoTime, midiTime){
       const diff = nt - midiTime;
       if (diff <= HAPTIC_WINDOW){
         if (videoTime - lastPulseLeftAt > MIN_PULSE_GAP){
-          let ok = pulseController(leftHaptic);
-          // Último recurso: si el runtime no expone actuador izquierdo, probamos el derecho
-          if (!ok && rightHaptic) ok = pulseController(rightHaptic);
+          const ok = pulseController(leftHaptic);
           if (!ok) mobileVibrate();
 
           lastPulseLeftAt = videoTime;
@@ -1680,31 +1652,47 @@ screen.visible = true;
 frameGroup.visible = true;
 points.visible = true; // opcional: partículas
 
-    try{
-      log("⏳ Cargando MIDI derecha...");
-      rightTimes = await loadMidiTimes(MIDI_RIGHT_URL);
-      log("✅ MIDI derecha OK (" + rightTimes.length + " notas)");
+try{
+  // Cargamos cada MIDI por separado para que uno no bloquee al otro
+  log("⏳ Cargando MIDI derecha...");
+  try{
+    rightTimes = await loadMidiTimes(MIDI_RIGHT_URL);
+    log("✅ MIDI derecha OK (" + rightTimes.length + " notas)");
+    if (rightTimes.length){
+      log("   R: primera=" + rightTimes[0].toFixed(3) + "s, última=" + rightTimes[rightTimes.length-1].toFixed(3) + "s");
+    } else {
+      log("⚠️ MIDI derecha cargó pero sin notas (¿archivo vacío o formato raro?)");
+    }
+  }catch(e){
+    rightTimes = [];
+    log("⚠️ No se pudo cargar MIDI derecha: " + (e?.message || e));
+  }
 
-      log("⏳ Cargando MIDI izquierda...");
-      leftTimes = await loadMidiTimes(MIDI_LEFT_URL);
-      log("✅ MIDI izquierda OK (" + leftTimes.length + " notas)");
+  log("⏳ Cargando MIDI izquierda...");
+  try{
+    leftTimes = await loadMidiTimes(MIDI_LEFT_URL);
+    log("✅ MIDI izquierda OK (" + leftTimes.length + " notas)");
+    if (leftTimes.length){
+      log("   L: primera=" + leftTimes[0].toFixed(3) + "s, última=" + leftTimes[leftTimes.length-1].toFixed(3) + "s");
+    } else {
+      log("⚠️ MIDI izquierda cargó pero sin notas (¿archivo vacío o formato raro?)");
+    }
+  }catch(e){
+    leftTimes = [];
+    log("⚠️ No se pudo cargar MIDI izquierda: " + (e?.message || e));
+  }
 
-      const mr = Math.max(0, video.currentTime - MIDI_OFFSET_RIGHT);
-      const ml = Math.max(0, video.currentTime - MIDI_OFFSET_LEFT);
-      rightIdx = resyncIndex(rightTimes, mr);
-      leftIdx  = resyncIndex(leftTimes,  ml);
+  // Resincroniza índices con el tiempo actual del vídeo
+  const mr = Math.max(0, video.currentTime - MIDI_OFFSET_RIGHT);
+  const ml = Math.max(0, video.currentTime - MIDI_OFFSET_LEFT);
+  if (rightTimes.length) rightIdx = resyncIndex(rightTimes, mr);
+  if (leftTimes.length)  leftIdx  = resyncIndex(leftTimes,  ml);
 
-      log("🟣 Listo. Offsets: R=" + MIDI_OFFSET_RIGHT + "s, L=" + MIDI_OFFSET_LEFT + "s");
+  log("🟣 Listo. Offsets: R=" + MIDI_OFFSET_RIGHT + "s, L=" + MIDI_OFFSET_LEFT + "s");
+  log("   (Si una mano no vibra, mira arriba si ese MIDI tiene 0 notas o si no se pudo cargar)");
 
-      // auto enter AR
-      try{
-        const ok = await navigator.xr.isSessionSupported("immersive-ar");
-        if(ok) await enter("immersive-ar");
-        else log("AR no soportado");
-      }catch(e){ log("AR error: "+e.message); }
-
-      log(("vibrate" in navigator) ? "📳 Vibración móvil disponible" : "ℹ️ Vibración móvil NO disponible (iOS suele bloquear)");
-    }catch(e){
+  // a
+}catch(e){
       log("⚠️ MIDI/háptica no disponibles: " + (e?.message || e));
     }
 
