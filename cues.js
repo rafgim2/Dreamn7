@@ -4,7 +4,7 @@ export const VIDEO_URL = "https://pub-aa6ee859836d478ca4ac85eb9f71f0c3.r2.dev/br
 // Cues (incluye título con type:"title")
 export const CUES = [
   // ✅ TÍTULO (ajusta el tiempo a cuando quieras que aparezca)
-  { t: 0.0, type: "title", text: ["Broken note "] },
+  { t: 0.0, type: "title", text: ["Dream nº7"] },
 
   // ✅ TEXTO NORMAL
 
@@ -17,6 +17,7 @@ export const CUES = [
   { t: 106.0, type: "text", text: ["Algo sigue vibrando en silencio,", "esperando para empezar…"] },
   { t: 125.0, type: "text", text: ["Porque incluso cuando nada ocurre,", "algo empieza a cambiar…"] },
 ];
+
 
 
 
