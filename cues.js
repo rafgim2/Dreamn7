@@ -15,8 +15,9 @@ export const CUES = [
   { t: 72.0, type: "text", text: ["A veces los gestos no se dan,", "y deciden no volver…"] },
   { t: 90.0, type: "text", text: ["Algo queda abierto y en espera,", "como dos acordes sin resolver…"] },
   { t: 107.0, type: "text", text: ["Algo sigue vibrando en silencio,", "esperando para empezar…"] },
-  { t: 125.0, type: "text", text: ["Porque incluso cuando nada ocurre,", "algo empieza a cambiar…"] },
+  { t: 124.0, type: "text", text: ["Porque incluso cuando nada ocurre,", "algo empieza a cambiar…"] },
 ];
+
 
 
 
