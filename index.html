@@ -43,8 +43,6 @@ box-shadow:
     </p>
     <button id="startExperience">🌟 Iniciar experiencia</button>
     <div class="small" id="log"></div>
-
-    <div class="small" id="log"></div>
       <div style="margin-top:18px; text-align:right; font-size:14px; opacity:.75;">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color:#d9c8ff; text-decoration:none;">
         © By Rafael Gimeno
@@ -145,9 +143,6 @@ video.addEventListener("ended", async () => {
   }
 
   overlay.style.display = "grid";
-  btnAR.disabled = true;
-  btnVR.disabled = true;
-
   // ✅ Permite reiniciar SIN recargar:
   NEEDS_RELOAD_AFTER_END = true; // (mantengo el nombre para no romper nada existente)
   resetExperienceState();
@@ -1382,15 +1377,46 @@ cometPos.copy(camPos)
   cometPrev.copy(cometPos);
 }
 
-// ==================== VIBRACIÓN MÓVIL ====================
-let lastMobileVibeAt = -999;
-function mobileVibrate(){
+// ==================== VIBRACIÓN MÓVIL (cola para R+L) ====================
+let lastMobileVibeAt = -999;     // última vibración real ejecutada
+let mobileVibeTimer = null;      // timer para vibración diferida
+let mobileVibePending = 0;       // cuántas peticiones están en cola (R/L pueden sumar)
+
+function doMobileVibrateNow(){
   if (!("vibrate" in navigator)) return;
-  const now = performance.now() / 1000;
-  if (now - lastMobileVibeAt < MOBILE_MIN_GAP) return;
-  lastMobileVibeAt = now;
+  lastMobileVibeAt = performance.now() / 1000;
+  // Una vibración corta y "limpia". Si se llama varias veces, el navegador suele reemplazar la anterior.
   navigator.vibrate(MOBILE_VIBRATION_MS);
 }
+
+function requestMobileVibrate(){
+  if (!("vibrate" in navigator)) return;
+
+  mobileVibePending++;
+
+  const now = performance.now() / 1000;
+  const nextAllowed = lastMobileVibeAt + MOBILE_MIN_GAP;
+
+  // Si podemos vibrar ya → vibramos y consumimos 1 petición.
+  if (now >= nextAllowed){
+    mobileVibePending = Math.max(0, mobileVibePending - 1);
+    doMobileVibrateNow();
+    return;
+  }
+
+  // Si no, programamos UNA vibración cuando toque (si no hay ya un timer).
+  if (mobileVibeTimer) return;
+
+  const waitMs = Math.max(0, (nextAllowed - now) * 1000);
+  mobileVibeTimer = setTimeout(() => {
+    mobileVibeTimer = null;
+    if (mobileVibePending > 0){
+      mobileVibePending = 0; // las agrupamos: 1 vibración representa todas las peticiones acumuladas
+      doMobileVibrateNow();
+    }
+  }, waitMs);
+}
+
 
 // ==================== HÁPTICA + MIDI ====================
 let rightHaptic = null;
@@ -1446,7 +1472,8 @@ function tickHand(times, which, videoTime, midiTime){
       const diff = nt - midiTime;
       if (diff <= HAPTIC_WINDOW){
         if (videoTime - lastPulseRightAt > MIN_PULSE_GAP){
-          pulseController(rightHaptic);
+          const ok = pulseController(rightHaptic);
+          if (!ok) requestMobileVibrate();
           lastPulseRightAt = videoTime;
 
           if (controllerRightObj){
@@ -1470,7 +1497,7 @@ function tickHand(times, which, videoTime, midiTime){
       if (diff <= HAPTIC_WINDOW){
         if (videoTime - lastPulseLeftAt > MIN_PULSE_GAP){
           const ok = pulseController(leftHaptic);
-          if (!ok) mobileVibrate();
+          if (!ok) requestMobileVibrate();
 
           lastPulseLeftAt = videoTime;
           frameEnergy = Math.min(1.0, frameEnergy + 0.16);
@@ -1689,21 +1716,6 @@ points.visible = true; // opcional: partículas
   }
 };
 
-// ✅ Si venimos de un reinicio post-experiencia, auto-iniciamos tras recargar
-btnAR.onclick = async () => {
-  try{
-    const ok = await navigator.xr.isSessionSupported("immersive-ar");
-    if (!ok) throw new Error("immersive-ar no soportado en este navegador");
-    await enter("immersive-ar");
-  }catch(e){
-    log("❌ AR: " + (e?.message || e));
-  }
-};
-
-btnVR.onclick = async () => {
-  try{ await enter("immersive-vr"); }
-  catch(e){ log("❌ VR: " + (e?.message || e)); }
-};
 
 window.addEventListener("resize", ()=>{
   camera.aspect = innerWidth/innerHeight;
@@ -1714,7 +1726,7 @@ window.addEventListener("resize", ()=>{
   applyParticlePointSize(renderer.xr.getSession?.() ?? null);
 });
 
-log("✅ App cargada. Pulsa “Iniciar vídeo”.");
+log("✅ App cargada. Pulsa “Iniciar experiencia”.");
 </script>
 </body>
 </html>
